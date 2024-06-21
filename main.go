@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	word := "Hello World!"
+	word := "Vlad"
 	width := 736
 	height := 736
 
@@ -87,14 +87,16 @@ func createImage(width, height int, initials string, fontPath string, fontSize f
 
 func addLabel(img *image.RGBA, x, y int, label string, face font.Face) {
 	col := color.RGBA{255, 255, 255, 255}
-	point := fixed.Point26_6{fixed.I(x), fixed.I(y)}
 
 	d := &font.Drawer{
 		Dst:  img,
 		Src:  image.NewUniform(col),
 		Face: face,
-		Dot:  point,
+		Dot:  fixed.Point26_6{X: fixed.I(x), Y: fixed.I(y)},
 	}
+
+	d.Dot.X -= d.MeasureString(label) / 2
+	d.Dot.Y += d.Face.Metrics().Height / 2
 
 	d.DrawString(label)
 }
