@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"image"
 	"image/color"
@@ -10,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
@@ -17,17 +19,28 @@ import (
 )
 
 func main() {
-	word := "Vlad"
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("Enter the word or phrase: ")
+	word, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatalf("Failed to read input: %v", err)
+	}
+	word = strings.TrimSpace(word)
+
 	width := 736
 	height := 736
+	fontSize := 64.0
+	outputFile := "output.png"
 
-	_, err := createImage(width, height, word, "OpenSans-SemiBold.ttf", 48)
+	_, err = createImage(width, height, word, "OpenSans-SemiBold.ttf", fontSize, outputFile)
 	if err != nil {
 		log.Fatalf("Failed to create image: %v", err)
 	}
+
+	fmt.Printf("Image created successfully as %s\n", outputFile)
 }
 
-func createImage(width, height int, initials string, fontPath string, fontSize float64) (*image.RGBA, error) {
+func createImage(width, height int, initials string, fontPath string, fontSize float64, outputPath string) (*image.RGBA, error) {
 	f, err := os.Open("bg.jpg")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open background image: %w", err)
@@ -69,9 +82,9 @@ func createImage(width, height int, initials string, fontPath string, fontSize f
 	}
 	defer face.Close()
 
-	addLabel(background, width/2, height-50, initials, face)
+	addLabel(background, width/2, height, initials, face)
 
-	outFile, err := os.Create("output.png")
+	outFile, err := os.Create(outputPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create output file: %w", err)
 	}
@@ -86,6 +99,8 @@ func createImage(width, height int, initials string, fontPath string, fontSize f
 }
 
 func addLabel(img *image.RGBA, x, y int, label string, face font.Face) {
+	bgColor := color.RGBA{0, 0, 0, 128}
+
 	col := color.RGBA{255, 255, 255, 255}
 
 	d := &font.Drawer{
@@ -96,7 +111,16 @@ func addLabel(img *image.RGBA, x, y int, label string, face font.Face) {
 	}
 
 	d.Dot.X -= d.MeasureString(label) / 2
-	d.Dot.Y += d.Face.Metrics().Height / 2
+	d.Dot.Y -= fixed.I(30)
+
+	padding := fixed.I(30)
+	bgRect := image.Rect(
+		0,
+		fixed.Int26_6(d.Dot.Y-face.Metrics().Height/2-padding).Floor(),
+		736,
+		fixed.Int26_6(d.Dot.Y+padding).Ceil(),
+	)
+	draw.Draw(img, bgRect, &image.Uniform{bgColor}, image.Point{}, draw.Over)
 
 	d.DrawString(label)
 }
