@@ -5,13 +5,17 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"image/draw"
+	"math/rand"
+
+	// "image/draw"
 	"image/jpeg"
 	"image/png"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"golang.org/x/image/draw"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
@@ -27,8 +31,8 @@ func main() {
 	}
 	word = strings.TrimSpace(word)
 
-	width := 736
-	height := 736
+	width := 600
+	height := 600
 	fontSize := 64.0
 	outputFile := "output.png"
 
@@ -41,7 +45,10 @@ func main() {
 }
 
 func createImage(width, height int, initials string, fontPath string, fontSize float64, outputPath string) (*image.RGBA, error) {
-	f, err := os.Open("bg.jpg")
+	randomNum := rand.Intn(9) + 1
+	filename := fmt.Sprintf("images/%02d.jpg", randomNum)
+
+	f, err := os.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open background image: %w", err)
 	}
@@ -74,7 +81,8 @@ func createImage(width, height int, initials string, fontPath string, fontSize f
 	}
 
 	background := image.NewRGBA(image.Rect(0, 0, width, height))
-	draw.Draw(background, background.Bounds(), bg, image.Point{}, draw.Src)
+	// draw.Draw(background, background.Bounds(), bg, image.Point{}, draw.Src)
+	draw.ApproxBiLinear.Scale(background, background.Bounds(), bg, bg.Bounds(), draw.Over, nil)
 
 	face, err := loadFont(fontPath, fontSize)
 	if err != nil {
@@ -117,7 +125,7 @@ func addLabel(img *image.RGBA, x, y int, label string, face font.Face) {
 	bgRect := image.Rect(
 		0,
 		fixed.Int26_6(d.Dot.Y-face.Metrics().Height/2-padding).Floor(),
-		736,
+		x*2,
 		fixed.Int26_6(d.Dot.Y+padding).Ceil(),
 	)
 	draw.Draw(img, bgRect, &image.Uniform{bgColor}, image.Point{}, draw.Over)
